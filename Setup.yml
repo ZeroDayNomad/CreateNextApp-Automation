@@ -1,0 +1,90 @@
+--- 
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    ansible_pyhton_interpreter: /usr/bin/python3
+  tasks:
+  - name: Change Directory to NextJS-Scripts
+    command: cd /Users/User/Documents/Apps/
+
+  # Description: Install create-next-app globally
+  - name: Install create-next-app globally
+    npm:
+      name: create-next-app
+      global: yes
+
+  # Description: Prompt user for name of NextJS App
+  - name: Name your NextJS App
+    pause:
+      prompt: "What is the name of your NextJS App?"
+    register: name
+
+  # Description: Create NextJS App with options and name, specified by user
+  - name: Install create-next-app with options
+    shell: 
+      create-next-app {{ name.user_input }} --use-npm --tailwind --app --ts --no-src-dir --no-eslint --import-alias "@/*"
+    args:
+      chdir: /Users/User/Documents/Apps/
+
+  # Description: Choose which packages you want to install
+  - name: Innstall NPM Packages
+    command: npm install {{ item }} --save
+    with_items:
+      - react-icons
+      - react-hook-form
+      - framer-motion
+    args:
+      chdir: /Users/User/Documents/Apps/{{ name.user_input }}
+
+  # Description: Create Environment Variables locally
+  - name: Create Environment Variables File Locally
+    file:
+      path: /Users/User/Documents/Apps/{{ name.user_input }}/.env.local
+      state: touch
+
+  # Description: Create (Root) Folder in App for Route Grouping
+  - name: Create (Root) Folder in App
+    file:
+      path: /Users/User/Documents/Apps/{{ name.user_input }}/app/(root)
+      state: directory
+
+  # Description: Create Page.tsx Folder for Route Grouping
+  - name: Move Page.tsx to (Root) Folder
+    shell: 
+      mv /Users/User/Documents/Apps/{{ name.user_input }}/app/page.tsx /Users/User/Documents/Apps/{{ name.user_input }}/app/\(root\)/page.tsx
+
+  # Description: Replace contents of page.tsx to become a layout template
+  - name: Replace contents of page.tsx
+    copy:
+      src: /Users/User/Documents/Scripts/Ansible/NextJS-Scripts/page.tsx
+      dest: /Users/User/Documents/Apps/{{ name.user_input }}/app/(root)/page.tsx
+
+  # Description: Move Layout.tsx to (Root) Folder for Route Grouping
+  - name: Move Layout.tsx to (Root) Folder
+    shell: 
+      mv /Users/User/Documents/Apps/{{ name.user_input }}/app/layout.tsx /Users/User/Documents/Apps/{{ name.user_input }}/app/\(root\)/layout.tsx
+
+  # Description: Changes reflect the new location of layout.tsx and subdirectories
+  - name: Change line 3 of layout.tsx
+    lineinfile:
+      path: /Users/User/Documents/Apps/{{ name.user_input }}/app/(root)/layout.tsx
+      regexp: "import './globals.css'"
+      line: "import '../globals.css'"
+
+  # Description: Change line 11 of tsconfig due to error with Bundler
+  - name: Change line of tsconfig.json
+    lineinfile:
+      path: /Users/User/Documents/Apps/{{ name.user_input }}/tsconfig.json
+      regexp: '"moduleResolution": "bundler"'
+      line: '    "moduleResolution": "node",'
+
+  # Description: VS Code opens the new NextJS App but hates me for some reason
+  - name: Export PATH for VSCode
+    shell: 
+      export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+
+  # Description: Open VSCode Project
+  - name: Open VSCode
+    shell: 
+      code /Users/User/Documents/Apps/{{ name.user_input }}
